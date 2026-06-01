@@ -34,6 +34,7 @@ export interface SiteConfig {
   ctaFooterLabel: string;
   ctaFooterUrl: string;
   copyrightText: string;
+  craftedBy: string;
   primaryNav: NavItem[];
   footerNav: NavItem[];
   legalNav: NavItem[];
@@ -41,6 +42,9 @@ export interface SiteConfig {
   // Optional — populated when a header variant supports hierarchical nav
   // (e.g. HeaderTransparentJC with accordion sections)
   headerNav?: HeaderNavItem[];
+  // Optional — service quick-links for the utility-bar header variant.
+  // `to` values may include a hash (e.g. "/plans#medicare") for anchor targets.
+  utilityNav?: NavItem[];
   volunteerUrl?: string;
   donateUrl?: string;
 }

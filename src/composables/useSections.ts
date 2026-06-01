@@ -12,6 +12,7 @@ import ContactSection from '@/components/sections/ContactSection.vue'
 import TextContent from '@/components/sections/TextContent.vue'
 import PortfolioSection from '@/components/sections/PortfolioSection.vue'
 import TeamProjectsSection from '@/components/sections/TeamProjectsSection.vue'
+import PartnerLogos from '@/components/sections/PartnerLogos.vue'
 
 /** Maps section _type (from Sanity) to Vue components */
 export const sectionMap: Record<string, Component> = {
@@ -28,6 +29,7 @@ export const sectionMap: Record<string, Component> = {
   textContent: TextContent,
   portfolioSection: PortfolioSection,
   teamProjectsSection: TeamProjectsSection,
+  partnerLogos: PartnerLogos,
 }
 
 /** GROQ query — just fetch the whole page document with sections */

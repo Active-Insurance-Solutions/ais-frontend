@@ -2,6 +2,7 @@
 import { computed, watch } from 'vue';
 import SiteHeader from './SiteHeader.vue';
 import SiteFooter from './SiteFooter.vue';
+import ViewToggle from '@/components/ui/ViewToggle.vue';
 import { useSeo } from '@/composables/useSeo';
 import { useSanity } from '@/composables/useSanity';
 import { useSiteStore } from '@/stores/useSiteStore';
@@ -14,8 +15,12 @@ const site = useSiteStore();
 // ── Site Settings ──
 interface SiteSettings {
   siteName?: string;
+  tagline?: string;
   logo?: { asset?: { url?: string } };
   darkLogo?: { asset?: { url?: string } };
+  contactEmail?: string;
+  contactPhone?: string;
+  address?: string;
   ctaLabel?: string;
   ctaUrl?: string;
   ctaHeadline?: string;
@@ -23,28 +28,38 @@ interface SiteSettings {
   ctaFooterLabel?: string;
   ctaFooterUrl?: string;
   copyrightText?: string;
+  craftedBy?: string;
 }
 
 const { data: settings, loading: settingsLoading } = useSanity<SiteSettings>(
   `*[_type == "siteSettings"][0]{
     siteName,
+    tagline,
     "logo": logo{asset->{url}},
     "darkLogo": darkLogo{asset->{url}},
+    contactEmail,
+    contactPhone,
+    address,
     ctaLabel,
     ctaUrl,
     ctaHeadline,
     ctaSubtext,
     ctaFooterLabel,
     ctaFooterUrl,
-    copyrightText
+    copyrightText,
+    craftedBy
   }`
 );
 
 watch(settings, (s) => {
   if (!s) return;
   if (s.siteName) site.name = s.siteName;
+  if (s.tagline) site.tagline = s.tagline;
   if (s.logo?.asset?.url) site.logo = s.logo.asset.url;
   if (s.darkLogo?.asset?.url) site.darkLogo = s.darkLogo.asset.url;
+  if (s.contactEmail) site.contactEmail = s.contactEmail;
+  if (s.contactPhone) site.contactPhone = s.contactPhone;
+  if (s.address) site.address = s.address;
   if (s.ctaLabel) site.ctaLabel = s.ctaLabel;
   if (s.ctaUrl) site.ctaUrl = s.ctaUrl;
   if (s.ctaHeadline) site.ctaHeadline = s.ctaHeadline;
@@ -52,6 +67,7 @@ watch(settings, (s) => {
   if (s.ctaFooterLabel) site.ctaFooterLabel = s.ctaFooterLabel;
   if (s.ctaFooterUrl) site.ctaFooterUrl = s.ctaFooterUrl;
   if (s.copyrightText) site.copyrightText = s.copyrightText;
+  if (s.craftedBy) site.craftedBy = s.craftedBy;
 });
 
 // ── Navigation ──
@@ -72,7 +88,26 @@ watch(navDocs, (docs) => {
   }
 });
 
-const ready = computed(() => !settingsLoading.value && !navLoading.value);
+// ── Utility Bar ──
+interface UtilityBarDoc {
+  phone?: string;
+  quickLinks?: Array<{ label: string; url: string }>;
+}
+
+const { data: utilityBar, loading: utilityBarLoading } = useSanity<UtilityBarDoc>(
+  `*[_type == "utilityBar"][0]{ phone, quickLinks[]{label, url} }`,
+);
+
+watch(utilityBar, (doc) => {
+  if (!doc) return;
+  if (doc.phone) site.contactPhone = doc.phone;
+  const links = (doc.quickLinks || []).map((l) => ({ label: l.label, to: l.url }));
+  if (links.length) site.utilityNav = links;
+});
+
+const ready = computed(
+  () => !settingsLoading.value && !navLoading.value && !utilityBarLoading.value,
+);
 </script>
 
 <template>
@@ -86,6 +121,10 @@ const ready = computed(() => !settingsLoading.value && !navLoading.value);
       <slot />
     </div>
     <SiteFooter />
+    <!-- Temporary classic/modern view-mode toggle for client preview.
+         Remove the ViewToggle + useViewStore + Header/Hero Classic components
+         once the client commits to one direction. -->
+    <ViewToggle />
   </div>
 </template>
 

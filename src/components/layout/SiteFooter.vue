@@ -1,13 +1,31 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { RouterLink } from 'vue-router';
+import { RouterLink, useRoute } from 'vue-router';
 import { useSiteStore } from '@/stores/useSiteStore';
 import { useSanity } from '@/composables/useSanity';
 import { getSocialIcon } from '@/composables/useSocialIcons';
+import { useBusinessHours } from '@/composables/useBusinessHours';
 import SmartLink from '@/components/ui/SmartLink.vue';
 
 const site = useSiteStore();
+const route = useRoute();
 const year = new Date().getFullYear();
+const { hours: businessHours } = useBusinessHours();
+
+// Closing CTA appears at the bottom of every page EXCEPT:
+//   - Home, where the hero handles the CTA
+//   - Contact, where the page IS the CTA — the closing band's button points
+//     to /contact, so rendering it here would be a link back to the same page
+// Per design-decisions.md L137 and rebuild-notes.md L117-122.
+const CTA_HIDDEN_ROUTES = ['/', '/contact'];
+const showClosingCta = computed(() => !CTA_HIDDEN_ROUTES.includes(route.path));
+
+// ── Footer Columns (CMS) ──
+interface FooterColumn { title: string; links: Array<{ label: string; url: string }> }
+const { data: footerColumnsDoc } = useSanity<{ columns: FooterColumn[] }>(
+  `*[_type == "footerColumns"][0]{ columns[]{title, links[]{label, url}} }`,
+);
+const cmsColumns = computed<FooterColumn[]>(() => footerColumnsDoc.value?.columns || []);
 
 const { data: socialDoc } = useSanity<{ links: { platform: string; url: string }[] }>(
   `*[_type == "socialLinks"][0]{"links": coalesce(links, items)}`
@@ -31,12 +49,20 @@ const platformLabels: Record<string, string> = {
   mastodon: 'Mastodon',
   nextdoor: 'Nextdoor',
 };
+
+function isExternalUrl(url: string): boolean {
+  return /^(https?:|mailto:|tel:)/i.test(url);
+}
+
+function telHref(raw: string): string {
+  return 'tel:' + (raw || '').replace(/[^\d+]/g, '');
+}
 </script>
 
 <template>
   <footer class="site-footer">
-    <!-- Section 1: CTA Band -->
-    <div v-if="site.ctaFooterLabel || site.ctaLabel" class="cta-band">
+    <!-- Section 1: Closing CTA Band — omitted on Home -->
+    <div v-if="showClosingCta && (site.ctaFooterLabel || site.ctaLabel)" class="cta-band">
       <div class="cta-band__inner">
         <h2 class="cta-band__heading">{{ site.ctaHeadline }}</h2>
         <p class="cta-band__text">{{ site.ctaSubtext }}</p>
@@ -46,22 +72,53 @@ const platformLabels: Record<string, string> = {
       </div>
     </div>
 
-    <!-- Section 2: Bottom Bar -->
+    <!-- Section 2: 3-column info area (Company / Legal from CMS; Contact from siteSettings) -->
+    <div class="footer-columns">
+      <div class="footer-columns__inner">
+        <!-- CMS-driven columns (Company, Legal). Editor controls titles + link lists. -->
+        <div v-for="col in cmsColumns" :key="col.title" class="footer-columns__col">
+          <h3 class="footer-columns__title">{{ col.title }}</h3>
+          <ul class="footer-columns__list">
+            <li v-for="link in col.links" :key="link.url">
+              <a
+                v-if="isExternalUrl(link.url)"
+                :href="link.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="footer-columns__link"
+              >{{ link.label }}</a>
+              <RouterLink v-else :to="link.url" class="footer-columns__link">{{ link.label }}</RouterLink>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Contact column (hardcoded structure, content pulled from siteSettings). -->
+        <div class="footer-columns__col">
+          <h3 class="footer-columns__title">Contact</h3>
+          <div class="footer-columns__contact">
+            <p class="footer-columns__contact-name">{{ site.name }}</p>
+            <p v-if="site.address" class="footer-columns__contact-address">{{ site.address }}</p>
+            <a v-if="site.contactPhone" :href="telHref(site.contactPhone)" class="footer-columns__link">{{ site.contactPhone }}</a>
+            <a v-if="site.contactEmail" :href="`mailto:${site.contactEmail}`" class="footer-columns__link">{{ site.contactEmail }}</a>
+          </div>
+
+          <!-- Hours of operation, fed by useBusinessHours (auto-switches Jun–Jul 2026). -->
+          <div v-if="businessHours.length" class="footer-columns__hours">
+            <p class="footer-columns__hours-label">Hours</p>
+            <ul class="footer-columns__hours-list">
+              <li v-for="row in businessHours" :key="row.days">
+                <span class="footer-columns__hours-days">{{ row.days }}</span>
+                <span class="footer-columns__hours-time">{{ row.time }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Bottom Bar (copyright / social / crafted-by) -->
     <div class="bottom-bar">
       <div class="bottom-bar__inner">
-        <!-- Legal nav row -->
-        <nav v-if="site.legalNav.length" class="bottom-bar__legal">
-          <RouterLink
-            v-for="item in site.legalNav"
-            :key="item.to"
-            :to="item.to"
-            class="bottom-bar__legal-link"
-          >
-            {{ item.label }}
-          </RouterLink>
-        </nav>
-
-        <!-- Copyright + Social row -->
         <div class="bottom-bar__meta">
           <p class="bottom-bar__copyright">
             {{ site.copyrightText || `© ${year} ${site.name}. All rights reserved.` }}
@@ -82,6 +139,14 @@ const platformLabels: Record<string, string> = {
               <span v-else class="bottom-bar__social-fallback">{{ (platformLabels[link.platform] || link.platform).charAt(0) }}</span>
             </a>
           </div>
+          <p v-if="site.craftedBy" class="bottom-bar__crafted">
+            <a
+              href="https://phiferwebsolutions.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="bottom-bar__crafted-link"
+            >{{ site.craftedBy }}</a>
+          </p>
         </div>
       </div>
     </div>
@@ -144,7 +209,112 @@ const platformLabels: Record<string, string> = {
   outline-offset: 2px;
 }
 
-/* ─── Section 2: Bottom Bar ─── */
+/* ─── Section 2: 3-Column Footer Info ─── */
+.footer-columns {
+  background-color: #1B4F8A;
+  color: #e5e7eb;
+  padding: 3rem 1.5rem;
+}
+
+.footer-columns__inner {
+  max-width: 72rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 3rem;
+}
+
+.footer-columns__title {
+  font-family: var(--font-heading);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #ffffff;
+  margin: 0 0 1rem;
+}
+
+.footer-columns__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.footer-columns__link {
+  font-size: 0.9375rem;
+  color: #e5e7eb;
+  text-decoration: none;
+  transition: color 0.2s ease;
+  border-radius: 2px;
+}
+
+.footer-columns__link:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.footer-columns__link:focus-visible {
+  outline: 3px dashed rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+}
+
+.footer-columns__contact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.footer-columns__contact-name {
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.footer-columns__contact-address {
+  white-space: pre-line;
+  color: #e5e7eb;
+  margin: 0;
+}
+
+.footer-columns__hours {
+  margin-top: 1.25rem;
+}
+
+.footer-columns__hours-label {
+  font-family: var(--font-heading);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  margin: 0 0 0.4rem;
+}
+
+.footer-columns__hours-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.875rem;
+  color: #e5e7eb;
+}
+
+.footer-columns__hours-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.1rem 0;
+}
+
+.footer-columns__hours-time {
+  color: #cbd5e1;
+}
+
+/* ─── Section 3: Bottom Bar ─── */
 .bottom-bar {
   background-color: #000000;
   padding: 1.25rem 1.5rem;
@@ -155,48 +325,47 @@ const platformLabels: Record<string, string> = {
   margin: 0 auto;
 }
 
-/* Legal nav row */
-.bottom-bar__legal {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 1.25rem;
-  margin-bottom: 0.75rem;
-}
-
-.bottom-bar__legal-link {
-  font-size: 0.8125rem;
-  color: #d1d5db;
-  transition: color 0.2s ease;
-  border-radius: 2px;
-}
-
-.bottom-bar__legal-link:hover {
-  color: #ffffff;
-}
-
-.bottom-bar__legal-link:focus-visible {
-  outline: 3px dashed rgba(255, 255, 255, 0.8);
-  outline-offset: 2px;
-}
-
-/* Copyright + Social row */
+/* Copyright (left) + Social (center) + Crafted By (right) row */
 .bottom-bar__meta {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  flex-wrap: wrap;
   gap: 1rem;
 }
 
 .bottom-bar__copyright {
   font-size: 0.875rem;
   color: #d1d5db;
+  text-align: left;
+}
+
+.bottom-bar__crafted {
+  font-size: 0.8125rem;
+  color: #9ca3af;
+  text-align: right;
+}
+
+.bottom-bar__crafted-link {
+  color: inherit;
+  text-decoration: none;
+  border-radius: 2px;
+  transition: color 0.2s ease;
+}
+
+.bottom-bar__crafted-link:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+.bottom-bar__crafted-link:focus-visible {
+  outline: 3px dashed rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
 }
 
 .bottom-bar__social {
   display: flex;
   gap: 1.25rem;
+  justify-content: center;
 }
 
 .bottom-bar__social-link {
@@ -236,8 +405,17 @@ const platformLabels: Record<string, string> = {
     font-size: 1.5rem;
   }
 
+  .footer-columns__inner {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
   .bottom-bar__meta {
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+  .bottom-bar__copyright,
+  .bottom-bar__crafted {
     text-align: center;
   }
 }

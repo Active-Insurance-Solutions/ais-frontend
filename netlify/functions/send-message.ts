@@ -5,9 +5,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'cj@activeinsurancegj.com';
 const FROM_EMAIL = process.env.CONTACT_FROM_EMAIL || 'onboarding@resend.dev';
+const SITE_DOMAIN = 'activeinsurancegj.com';
 
 export default async (req: Request, _context: Context) => {
-  // Only allow POST
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
@@ -16,9 +16,16 @@ export default async (req: Request, _context: Context) => {
   }
 
   try {
-    const { name, email, message } = await req.json();
+    const {
+      name,
+      email,
+      message,
+      phone,
+      bestDay,
+      bestTime,
+      preferredMethod,
+    } = await req.json();
 
-    // Validate required fields
     if (!name || !email || !message) {
       return new Response(JSON.stringify({ error: 'Name, email, and message are required.' }), {
         status: 400,
@@ -26,7 +33,6 @@ export default async (req: Request, _context: Context) => {
       });
     }
 
-    // Basic email format check
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return new Response(JSON.stringify({ error: 'Invalid email address.' }), {
         status: 400,
@@ -34,30 +40,42 @@ export default async (req: Request, _context: Context) => {
       });
     }
 
+    const optionalRow = (label: string, value?: string) =>
+      value
+        ? `<tr>
+            <td style="padding: 8px 12px; font-weight: 600; color: #4b5563; vertical-align: top;">${label}</td>
+            <td style="padding: 8px 12px; color: #1f2937;">${escapeHtml(value)}</td>
+          </tr>`
+        : '';
+
     const { error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: TO_EMAIL,
       replyTo: email,
-      subject: `New message from ${name} via ##CLIENT_DOMAIN##`,
+      subject: `New message from ${name} via ${SITE_DOMAIN}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #0e7490; margin-bottom: 24px;">New Contact Form Submission</h2>
+          <h2 style="color: #1B4F8A; margin-bottom: 24px;">New Contact Form Submission</h2>
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
-              <td style="padding: 8px 12px; font-weight: 600; color: #4b5563; vertical-align: top; width: 100px;">Name</td>
+              <td style="padding: 8px 12px; font-weight: 600; color: #4b5563; vertical-align: top; width: 140px;">Name</td>
               <td style="padding: 8px 12px; color: #1f2937;">${escapeHtml(name)}</td>
             </tr>
             <tr>
               <td style="padding: 8px 12px; font-weight: 600; color: #4b5563; vertical-align: top;">Email</td>
-              <td style="padding: 8px 12px; color: #1f2937;"><a href="mailto:${escapeHtml(email)}" style="color: #0e7490;">${escapeHtml(email)}</a></td>
+              <td style="padding: 8px 12px; color: #1f2937;"><a href="mailto:${escapeHtml(email)}" style="color: #1B4F8A;">${escapeHtml(email)}</a></td>
             </tr>
+            ${optionalRow('Phone', phone)}
+            ${optionalRow('Best day to contact', bestDay)}
+            ${optionalRow('Best time to contact', bestTime)}
+            ${optionalRow('Preferred method', preferredMethod)}
             <tr>
               <td style="padding: 8px 12px; font-weight: 600; color: #4b5563; vertical-align: top;">Message</td>
               <td style="padding: 8px 12px; color: #1f2937; white-space: pre-wrap;">${escapeHtml(message)}</td>
             </tr>
           </table>
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
-          <p style="font-size: 12px; color: #9ca3af;">Sent from the contact form on ##CLIENT_DOMAIN##</p>
+          <p style="font-size: 12px; color: #9ca3af;">Sent from the contact form on ${SITE_DOMAIN}</p>
         </div>
       `,
     });

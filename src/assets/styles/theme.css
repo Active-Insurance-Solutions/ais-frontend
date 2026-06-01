@@ -1,5 +1,4 @@
-@import url('https://fonts.google.com/specimen/Merriweather');
-@import url('https://fonts.google.com/specimen/Inter');
+/* Font face declarations are loaded via index.html <link> tag (Google Fonts CSS endpoint). */
 
 :root {
   --color-primary: #1B4F8A;
