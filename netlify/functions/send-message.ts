@@ -3,7 +3,11 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'cj@activeinsurancegj.com';
+// Default routes to rhonda@ — the general contact inbox per client direction.
+// CONTACT_TO_EMAIL env var in Netlify overrides this if a different recipient
+// is ever needed without a redeploy. (cj@ is the CEO's personal address and
+// is NOT the right destination for general inquiries.)
+const TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'rhonda@activeinsurancegj.com';
 const FROM_EMAIL = process.env.CONTACT_FROM_EMAIL || 'onboarding@resend.dev';
 const SITE_DOMAIN = 'activeinsurancegj.com';
 
