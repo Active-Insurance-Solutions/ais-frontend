@@ -31,10 +31,6 @@ const pageMeta: Record<string, { title: string; description: string }> = {
     title: 'Accessibility Statement',
     description: 'Accessibility Statement - Active Insurance Solutions',
   },
-  '/cookie-policy': {
-    title: 'Cookie Policy',
-    description: 'Active Insurance Solutions does not use cookies to track or profile visitors. Learn how our privacy-first analytics work and how third-party embeds may behave.',
-  },
   '/services': {
     title: 'Services',
     description: 'From employer benefit plans to individual health coverage, Active Insurance Solutions offers inclusive, flexible insurance solutions for Western Colorado.',
