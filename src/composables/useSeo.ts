@@ -31,6 +31,10 @@ const pageMeta: Record<string, { title: string; description: string }> = {
     title: 'Accessibility Statement',
     description: 'Accessibility Statement - Active Insurance Solutions',
   },
+  '/cookie-policy': {
+    title: 'Cookie Policy',
+    description: 'Active Insurance Solutions does not use cookies to track or profile visitors. Learn how our privacy-first analytics work and how third-party embeds may behave.',
+  },
   '/services': {
     title: 'Services',
     description: 'From employer benefit plans to individual health coverage, Active Insurance Solutions offers inclusive, flexible insurance solutions for Western Colorado.',
@@ -70,9 +74,13 @@ export function useSeo() {
     description: 'Purpose-driven solutions from ' + siteName + '.',
   });
 
+  // Append location so the site ranks better for "{service} grand junction co"
+  // queries — addresses the locationInTitle gap from the 2026-04 health check.
+  // Skipped when the per-page title already contains the brand (covers any
+  // hand-set titles that include their own location framing).
   const fullTitle = computed(() => {
     const t = meta.value.title;
-    return t.includes(siteName) ? t : `${t} | ${siteName}`;
+    return t.includes(siteName) ? t : `${t} | ${siteName} | Grand Junction, CO`;
   });
 
   const canonicalUrl = computed(() => `${siteUrl}${route.path === '/' ? '' : route.path}`);

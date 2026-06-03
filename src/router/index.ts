@@ -6,6 +6,7 @@ const Contact = () => import('@/pages/Contact.vue');
 const PrivacyPolicy = () => import('@/components/layout/LegalPage.vue');
 const TermsAndConditions = () => import('@/components/layout/LegalPage.vue');
 const Accessibility = () => import('@/components/layout/LegalPage.vue');
+const CookiePolicy = () => import('@/components/layout/LegalPage.vue');
 const Services = () => import('@/pages/Services.vue');
 const Faq = () => import('@/pages/Faq.vue');
 const Plans = () => import('@/pages/Plans.vue');
@@ -43,6 +44,11 @@ const routes = [
     path: '/accessibility',
     name: 'Accessibility Statement',
     component: Accessibility,
+  },
+  {
+    path: '/cookie-policy',
+    name: 'Cookie Policy',
+    component: CookiePolicy,
   },
   {
     path: '/services',
