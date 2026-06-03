@@ -2,7 +2,6 @@
 import { computed, watch } from 'vue';
 import SiteHeader from './SiteHeader.vue';
 import SiteFooter from './SiteFooter.vue';
-import ViewToggle from '@/components/ui/ViewToggle.vue';
 import { useSeo } from '@/composables/useSeo';
 import { useSanity } from '@/composables/useSanity';
 import { useSiteStore } from '@/stores/useSiteStore';
@@ -121,10 +120,6 @@ const ready = computed(
       <slot />
     </div>
     <SiteFooter />
-    <!-- Temporary classic/modern view-mode toggle for client preview.
-         Remove the ViewToggle + useViewStore + Header/Hero Classic components
-         once the client commits to one direction. -->
-    <ViewToggle />
   </div>
 </template>
 

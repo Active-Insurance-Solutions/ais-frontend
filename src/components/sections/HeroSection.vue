@@ -1,27 +1,19 @@
 <script setup>
 import { computed } from 'vue';
 import { useSiteStore } from '@/stores/useSiteStore';
-import { useViewStore } from '@/stores/useViewStore';
 import SmartLink from '@/components/ui/SmartLink.vue';
-import HeroClassic from '@/components/sections/HeroClassic.vue';
 import { sanityImage } from '@/composables/useSanityImage';
 
 const props = defineProps({ section: { type: Object, default: null } });
 const site = useSiteStore();
-const view = useViewStore();
 
 // Default to compact title-bar rendering. Landing-page heroes that want the
 // full-height treatment (image, CTA, ~480px tall) opt out by setting
 // `compact: false` on the section in the CMS / seed.
 const isCompact = computed(() => props.section?.compact !== false);
 
-// Classic-mode override only applies to the full landing hero (Home page).
-// Compact sub-page title bars use the modern treatment regardless of mode.
-const useClassic = computed(() => !isCompact.value && view.mode === 'classic');
-
-/* External life-insurance quote destination. Hardcoded to match the
- * client-supplied URL used on HeroClassic — parity between view modes.
- * Move to siteSettings if the destination ever needs to be CMS-editable. */
+/* External life-insurance quote destination — hardcoded per client. Move to
+ * siteSettings if it ever needs to be CMS-editable. */
 const QUOTE_URL = 'https://vivecp.com/325f0387-6c68-4e2d-8966-5370c6714eb9';
 
 const heroStyle = computed(() => {
@@ -41,11 +33,8 @@ const heroStyle = computed(() => {
 </script>
 
 <template>
-  <!-- Classic-mode landing hero (Home page, classic view) -->
-  <HeroClassic v-if="useClassic" :section="section" />
-
   <!-- Compact title bar — default for inner pages -->
-  <section v-else-if="isCompact" class="hero-compact">
+  <section v-if="isCompact" class="hero-compact">
     <div class="hero-compact__inner">
       <h1 v-if="section?.title" class="hero-compact__title">{{ section.title }}</h1>
       <p v-if="section?.subtitle" class="hero-compact__subtitle">{{ section.subtitle }}</p>
@@ -57,11 +46,10 @@ const heroStyle = computed(() => {
     <div class="relative z-10 text-center text-white max-w-3xl mx-auto">
       <h1 v-if="section?.title || site.name" class="text-5xl font-extrabold leading-tight mb-4">{{ section?.title || site.name }}</h1>
       <p v-if="section?.subtitle || site.tagline" class="text-xl opacity-80 mb-8">{{ section?.subtitle || site.tagline }}</p>
-      <!-- Sole hero CTA: external life-insurance quote link (same vivecp
-           destination as HeroClassic). The CMS-driven section.cta is
-           intentionally omitted here — the sitewide pre-footer CTA already
-           handles contact-form routing, so the hero stays focused on the
-           one action that's unique to the landing page. -->
+      <!-- Sole hero CTA: external life-insurance quote link. The CMS-driven
+           section.cta is intentionally omitted — the sitewide pre-footer CTA
+           handles contact routing, so the hero focuses on the one action
+           unique to the landing page. -->
       <SmartLink :to="QUOTE_URL" class="focus-ring-light inline-flex items-center gap-2 bg-white/10 border-2 border-white text-white font-semibold px-8 py-3 rounded-lg hover:bg-white hover:text-[var(--color-primary)] transition-colors">
         Get a Personalized Life Insurance Quote
         <span aria-hidden="true">→</span>
