@@ -81,6 +81,14 @@ export function useSeo() {
 
   const canonicalUrl = computed(() => `${siteUrl}${route.path === '/' ? '' : route.path}`);
 
+  // 404 pages should not be indexed by search engines, otherwise Google can
+  // surface stale "page not found" results when a URL is misspelled or
+  // deleted. The catch-all route in router/index.ts has name 'NotFound'
+  // regardless of the requested path, so route.name is the right hook.
+  const robotsContent = computed(() =>
+    route.name === 'NotFound' ? 'noindex, nofollow' : 'index, follow',
+  );
+
   useHead({
     title: fullTitle,
     link: [
@@ -88,6 +96,7 @@ export function useSeo() {
     ],
     meta: [
       { name: 'description', content: computed(() => meta.value.description) },
+      { name: 'robots', content: robotsContent },
       { property: 'og:type', content: 'website' },
       { property: 'og:site_name', content: siteName },
       { property: 'og:title', content: fullTitle },
