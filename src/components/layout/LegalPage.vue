@@ -61,20 +61,60 @@ watch(slug, loadPage, { immediate: true });
 </template>
 
 <style scoped>
+/* Heading scale — six distinct steps so PortableText h2..h6 styles set
+ * via Studio always render with a clear visual hierarchy. Layout strategy:
+ *   h2-h4: Merriweather serif, sentence case, descending size
+ *   h5-h6: Inter sans-serif, uppercase, descending size + tracking
+ * The serif → uppercase-sans switch at h5 gives an unmissable break even
+ * when consecutive heading levels are visually close in size.
+ *
+ * Margin-top scales with prominence so deeper headings sit closer to
+ * their surrounding text; margin-bottom is uniform at 0.5rem. */
 .legal-content :deep(h2) {
   font-family: var(--font-heading);
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: var(--color-text);
-  margin-top: 2.5rem;
+  line-height: 1.25;
+  margin-top: 3rem;
   margin-bottom: 1rem;
 }
 .legal-content :deep(h3) {
   font-family: var(--font-heading);
-  font-size: 1.125rem;
+  font-size: 1.375rem;
   font-weight: 700;
   color: var(--color-text);
+  line-height: 1.3;
+  margin-top: 2.25rem;
+  margin-bottom: 0.75rem;
+}
+.legal-content :deep(h4) {
+  font-family: var(--font-heading);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.35;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+.legal-content :deep(h5) {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.legal-content :deep(h6) {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 1.25rem;
   margin-bottom: 0.5rem;
 }
 .legal-content :deep(p) {
