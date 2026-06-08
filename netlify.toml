@@ -25,7 +25,27 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
+# Dynamic client-routed prefixes need to serve index.html with a 200 status
+# so the SPA can boot and resolve the slug. Listed BEFORE the catch-all so
+# they match first. If you add more dynamic top-level prefixes, add them
+# here too — otherwise they'll fall into the 404 catch-all below.
+[[redirects]]
+  from = "/portfolio/*"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/team-projects/*"
+  to = "/index.html"
+  status = 200
+
+# Catch-all for anything that isn't a prerendered HTML file or a known
+# dynamic prefix. Returns 404 so search engines record real not-found
+# results instead of indexing the SPA shell as a stale 404. Combined with
+# the route-level <meta name="robots" content="noindex"> emitted by
+# useSeo for route.name === 'NotFound', this gives both a hard signal
+# (HTTP status) and a soft signal (meta robots).
 [[redirects]]
   from = "/*"
   to = "/index.html"
-  status = 200
+  status = 404
