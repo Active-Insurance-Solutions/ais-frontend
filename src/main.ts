@@ -1,5 +1,6 @@
 import { ViteSSG } from 'vite-ssg';
 import { createPinia } from 'pinia';
+import * as Sentry from '@sentry/vue';
 import App from './App.vue';
 import { routes, scrollBehavior } from './router';
 import './assets/styles/main.css';
@@ -7,18 +8,38 @@ import './assets/styles/main.css';
 /* ViteSSG wraps createApp and handles router construction + head management
  * (via @unhead/vue) automatically. At build time the static routes get
  * prerendered to dist/{route}/index.html with their useSeo()-generated meta
- * tags baked in — so social previews, JSON-LD schema, and Google's older
- * crawlers all see the right meta even before any JS runs.
- *
- * The Sanity-fetched body content (legal page bodies, team list, partner
- * logos, etc.) still loads on the client after hydration — only the static
- * meta layer is prerendered. That's the goal: cheap social/SEO win without
- * wiring async data fetching into the SSG pipeline. */
+ * tags + Sanity-fetched page body (via useSanityAsync + <Suspense>) baked
+ * in — so social previews, JSON-LD schema, and Google's older crawlers all
+ * see the right content even before any JS runs. */
 export const createApp = ViteSSG(
   App,
   { routes, scrollBehavior },
   ({ app, isClient }) => {
     app.use(createPinia());
+
+    /* Sentry — client-side error monitoring. Initialized only when:
+     *   - We're in the browser (not during SSG prerender)
+     *   - The build is production (skips dev where rebuild errors are noisy)
+     *   - A DSN is configured (so a missing env var doesn't crash init)
+     * Minimal config: error capture only. No replay or performance tracing,
+     * which keeps the bundle small and free-tier quota usage low. Wire those
+     * in later if you actually need them. */
+    if (isClient && import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
+      Sentry.init({
+        app,
+        dsn: import.meta.env.VITE_SENTRY_DSN,
+        environment: import.meta.env.VITE_SANITY_DATASET || 'production',
+        // Drop noisy errors that aren't actionable (browser extensions,
+        // network blips from ad blockers, etc.). Extend as patterns surface.
+        ignoreErrors: [
+          'ResizeObserver loop limit exceeded',
+          'Non-Error promise rejection captured',
+        ],
+        tracesSampleRate: 0,
+        replaysSessionSampleRate: 0,
+        replaysOnErrorSampleRate: 0,
+      });
+    }
 
     if (isClient) {
       // Space-to-click for keyboard accessibility on <a> tags. Native anchors
