@@ -2,15 +2,23 @@
 import { ref, watch, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { PortableText } from '@portabletext/vue';
+import { useSanityAsync } from '@/composables/useSanity';
 
 const route = useRoute();
-// Derive the legalPage slug from the current path (e.g. "/privacy-policy" → "privacy-policy").
-// The router doesn't pass props, so this is the single source of truth.
-const slug = computed(() => route.path.replace(/^\//, '').replace(/\/$/, ''));
-const fallbackTitle = computed(() => String(route.name || ''));
+const slugFromPath = (p) => p.replace(/^\//, '').replace(/\/$/, '');
 
-const page = ref(null);
-const loading = ref(true);
+function legalQuery(s) {
+  return `*[_type == "legalPage" && slug.current == "${s}"][0]{ title, lastUpdated, body }`;
+}
+
+/* Initial fetch — awaits inline so vite-ssg bakes the legal-page body into
+ * the prerendered HTML. Each of /privacy-policy, /terms-and-conditions,
+ * and /accessibility gets its own static HTML file with the right content
+ * (vite-ssg renders each route in its own component instance). */
+const { data: page } = await useSanityAsync(legalQuery(slugFromPath(route.path)));
+const loading = ref(false);
+
+const fallbackTitle = computed(() => String(route.name || ''));
 
 /* Sanity stores legalPage.lastUpdated as an ISO date string ("2026-06-08").
  * `new Date(str)` interprets that as UTC midnight; without timeZone: 'UTC'
@@ -28,29 +36,39 @@ const formattedLastUpdated = computed(() => {
   });
 });
 
+/* Vue Router reuses this same component instance across all three legal
+ * routes — script-setup's await only runs on initial mount, not on
+ * subsequent in-app navigations (e.g. clicking Privacy → Terms in the
+ * footer). Watch the slug and re-fetch imperatively for those. immediate
+ * is left at the default `false` so we don't double-fetch what the await
+ * already returned at mount. */
 const projectId = import.meta.env.VITE_SANITY_PROJECT_ID;
 const dataset = import.meta.env.VITE_SANITY_DATASET || 'production';
 
-// Re-fetch whenever the slug changes. The router reuses this same component
-// across all three legal routes, so onMounted only fires once — without this
-// watcher, navigating between legal pages leaves stale content on screen.
-async function loadPage(currentSlug) {
-  if (!projectId) { loading.value = false; return; }
+async function refetch(slug) {
+  if (!projectId) return;
   loading.value = true;
-  page.value = null;
   try {
-    const query = encodeURIComponent(`*[_type == "legalPage" && slug.current == "${currentSlug}"][0]{ title, lastUpdated, body }`);
-    const res = await fetch(`https://${projectId}.apicdn.sanity.io/v2024-01-01/data/query/${dataset}?query=${query}`);
+    const query = encodeURIComponent(legalQuery(slug));
+    const res = await fetch(
+      `https://${projectId}.apicdn.sanity.io/v2024-01-01/data/query/${dataset}?query=${query}`,
+    );
     const json = await res.json();
     page.value = json.result || null;
   } catch (e) {
     console.error('Failed to fetch legal page:', e);
+    page.value = null;
   } finally {
     loading.value = false;
   }
 }
 
-watch(slug, loadPage, { immediate: true });
+watch(
+  () => slugFromPath(route.path),
+  (newSlug, oldSlug) => {
+    if (newSlug !== oldSlug) refetch(newSlug);
+  },
+);
 </script>
 
 <template>

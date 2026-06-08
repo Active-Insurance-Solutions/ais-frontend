@@ -1,9 +1,9 @@
 <script setup>
-import { useSanity } from '@/composables/useSanity';
+import { useSanityAsync } from '@/composables/useSanity';
 import { sectionMap, pageQuery } from '@/composables/useSections';
 import { useRevealObserver } from '@/composables/useRevealObserver';
 
-const { data: page } = useSanity(pageQuery('/about'));
+const { data: page } = await useSanityAsync(pageQuery('/about'));
 useRevealObserver(page);
 </script>
 
