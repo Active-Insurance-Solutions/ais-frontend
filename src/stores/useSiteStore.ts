@@ -42,7 +42,7 @@ export const useSiteStore = defineStore('site', {
     logo: '',
     darkLogo: '',
     tagline: 'Good Health, That\'s the Plan',
-    contactEmail: 'rhonda@activeinsurancegj.com',
+    contactEmail: 'cj@activeinsurancegj.com',
     contactPhone: '970.241.5542',
     address: '940 Colorado Ave, Grand Junction, CO 81501',
     ctaLabel: 'Contact Us',
