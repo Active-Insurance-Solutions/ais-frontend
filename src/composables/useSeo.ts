@@ -50,7 +50,7 @@ const schemaJsonLd = {
   "@type": "ProfessionalService",
   "name": "Active Insurance Solutions",
   "url": "https://activeinsurancegj.com",
-  "email": "rhonda@activeinsurancegj.com",
+  "email": "cj@activeinsurancegj.com",
   "telephone": "9702415542",
   "address": {
     "@type": "PostalAddress",
