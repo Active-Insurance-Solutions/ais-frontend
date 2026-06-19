@@ -26,19 +26,20 @@ export const createApp = ViteSSG(
      *   - We're in the browser (not during SSG prerender)
      *   - The build is production (skips dev where rebuild errors are noisy)
      *   - A DSN is configured (so a missing env var doesn't crash init)
-     * Minimal config: error capture only. No replay or performance tracing,
-     * which keeps the bundle small and free-tier quota usage low. Wire those
-     * in later if you actually need them. */
+     * Errors + replay-on-error are on; performance tracing and session
+     * sampling are off so we stay inside the free-tier monthly quotas.
+     * VITE_SENTRY_ENVIRONMENT is set per Netlify deploy context so the
+     * Sentry environment field reflects production vs. staging vs. preview
+     * (decoupled from VITE_SANITY_DATASET, which we keep on `staging`
+     * everywhere for content workflow reasons). */
     if (isClient && import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
       Sentry.init({
         app,
         dsn: import.meta.env.VITE_SENTRY_DSN,
-        environment: import.meta.env.VITE_SANITY_DATASET || 'production',
+        environment: import.meta.env.VITE_SENTRY_ENVIRONMENT || 'production',
+        integrations: [Sentry.replayIntegration()],
         // Drop noisy errors that aren't actionable (browser extensions,
         // network blips from ad blockers, etc.). Extend as patterns surface.
-        integrations: [
-          Sentry.replayIntegration()
-        ],
         ignoreErrors: [
           'ResizeObserver loop limit exceeded',
           'Non-Error promise rejection captured',
