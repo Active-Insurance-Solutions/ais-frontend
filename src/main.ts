@@ -14,7 +14,12 @@ import './assets/styles/main.css';
 export const createApp = ViteSSG(
   App,
   { routes, scrollBehavior },
-  ({ app, isClient }) => {
+  ({ app }) => {
+    /* vite-ssg deprecated the `isClient` callback arg in favor of the
+     * standard Vite SSR flag. Same semantics — true in the browser, false
+     * during SSG prerender. */
+    const isClient = !import.meta.env.SSR;
+
     app.use(createPinia());
 
     /* Sentry — client-side error monitoring. Initialized only when:
@@ -31,13 +36,16 @@ export const createApp = ViteSSG(
         environment: import.meta.env.VITE_SANITY_DATASET || 'production',
         // Drop noisy errors that aren't actionable (browser extensions,
         // network blips from ad blockers, etc.). Extend as patterns surface.
+        integrations: [
+          Sentry.replayIntegration()
+        ],
         ignoreErrors: [
           'ResizeObserver loop limit exceeded',
           'Non-Error promise rejection captured',
         ],
         tracesSampleRate: 0,
         replaysSessionSampleRate: 0,
-        replaysOnErrorSampleRate: 0,
+        replaysOnErrorSampleRate: 1.0,
       });
     }
 
