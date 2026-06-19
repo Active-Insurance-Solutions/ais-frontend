@@ -14,11 +14,12 @@
     # original health check called out. Allowed origins are limited to the
     # exact third parties the site actually loads: Sanity CDN (images +
     # GROQ), Google Fonts (CSS + woff2), Simple Analytics (cookieless
-    # tracker), and Google Maps (Contact page iframe). 'unsafe-inline'
-    # for style-src is required because Vue components and Tailwind
-    # utilities emit inline style attributes; risk is low on a static
-    # marketing site with no user-generated HTML.
-    Content-Security-Policy = "default-src 'self'; script-src 'self' https://scripts.simpleanalyticscdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://cdn.sanity.io https://*.simpleanalyticscdn.com; connect-src 'self' https://*.apicdn.sanity.io https://queue.simpleanalyticscdn.com; frame-src https://www.google.com https://maps.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
+    # tracker), Google Maps (Contact page iframe), and Sentry's US-region
+    # ingest endpoint (client-side error reporting). 'unsafe-inline' for
+    # style-src is required because Vue components and Tailwind utilities
+    # emit inline style attributes; risk is low on a static marketing site
+    # with no user-generated HTML.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://scripts.simpleanalyticscdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://cdn.sanity.io https://*.simpleanalyticscdn.com; connect-src 'self' https://*.apicdn.sanity.io https://queue.simpleanalyticscdn.com https://*.ingest.us.sentry.io; frame-src https://www.google.com https://maps.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests"
 
 [[headers]]
   for = "/assets/*"
