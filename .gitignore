@@ -8,3 +8,8 @@ dist/
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# npm lockfile — this project uses pnpm exclusively (see pnpm-lock.yaml).
+# A stray package-lock.json caused Dependabot to double-report every
+# advisory once per manifest, polluting the security tab.
+package-lock.json
