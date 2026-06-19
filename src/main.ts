@@ -22,21 +22,6 @@ export const createApp = ViteSSG(
 
     app.use(createPinia());
 
-    /* TEMPORARY DIAGNOSTIC — remove with the matching `debug: true` flag
-     * once Sentry visibility is verified. Logs which init gates passed and
-     * which env vars actually reached the bundle. */
-    if (isClient) {
-      const dsn = import.meta.env.VITE_SENTRY_DSN;
-      // eslint-disable-next-line no-console
-      console.log('[Sentry-debug] gates', {
-        isBrowser: isClient,
-        isProd: import.meta.env.PROD,
-        hasDsn: !!dsn,
-        dsnHost: dsn?.match(/@([^/]+)/)?.[1] ?? 'none',
-        sanityDataset: import.meta.env.VITE_SANITY_DATASET ?? 'unset',
-      });
-    }
-
     /* Sentry — client-side error monitoring. Initialized only when:
      *   - We're in the browser (not during SSG prerender)
      *   - The build is production (skips dev where rebuild errors are noisy)
@@ -47,7 +32,6 @@ export const createApp = ViteSSG(
     if (isClient && import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
       Sentry.init({
         app,
-        debug: true, // TEMPORARY DIAGNOSTIC — remove with the gate logger above.
         dsn: import.meta.env.VITE_SENTRY_DSN,
         environment: import.meta.env.VITE_SANITY_DATASET || 'production',
         // Drop noisy errors that aren't actionable (browser extensions,
@@ -60,11 +44,6 @@ export const createApp = ViteSSG(
         replaysSessionSampleRate: 0,
         replaysOnErrorSampleRate: 0,
       });
-      // eslint-disable-next-line no-console
-      console.log('[Sentry-debug] init called — SDK should now be active');
-    } else if (isClient) {
-      // eslint-disable-next-line no-console
-      console.warn('[Sentry-debug] init SKIPPED — see gate values above');
     }
 
     if (isClient) {
