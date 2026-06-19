@@ -36,13 +36,16 @@ export const createApp = ViteSSG(
         environment: import.meta.env.VITE_SANITY_DATASET || 'production',
         // Drop noisy errors that aren't actionable (browser extensions,
         // network blips from ad blockers, etc.). Extend as patterns surface.
+        integrations: [
+          Sentry.replayIntegration()
+        ],
         ignoreErrors: [
           'ResizeObserver loop limit exceeded',
           'Non-Error promise rejection captured',
         ],
         tracesSampleRate: 0,
         replaysSessionSampleRate: 0,
-        replaysOnErrorSampleRate: 0,
+        replaysOnErrorSampleRate: 1.0,
       });
     }
 

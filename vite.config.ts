@@ -30,6 +30,11 @@ export default defineConfig({
   },
 
   build: {
-    sourcemap: true,
+    /* 'hidden' generates source maps in dist/ (so the Sentry plugin can
+     * upload them) but strips the `//# sourceMappingURL=...` comment from
+     * each bundle. Combined with the plugin's filesToDeleteAfterUpload,
+     * this means: maps reach Sentry → maps don't ship publicly → browsers
+     * never try to fetch missing .map files → no 404 noise in DevTools. */
+    sourcemap: 'hidden',
   },
 });
