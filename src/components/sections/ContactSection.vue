@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useSiteStore } from '@/stores/useSiteStore';
 import { useBusinessHours } from '@/composables/useBusinessHours';
 defineProps({ section: { type: Object, default: null } });
@@ -18,6 +18,17 @@ const contactSent = ref(false);
 const contactError = ref('');
 const submitting = ref(false);
 
+// Bot protection (Tier 1): honeypot field + time-to-submit gate. Both are
+// validated server-side in send-message.ts — these just feed it the signals.
+// `website` is a hidden field real users never see; bots tend to fill it.
+const website = ref('');
+// Captured on mount (client only). The server rejects submissions that arrive
+// implausibly fast after render.
+let formLoadedAt = 0;
+onMounted(() => {
+  formLoadedAt = Date.now();
+});
+
 const dayOptions = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const timeOptions = ['Morning', 'Afternoon', 'Evening'];
 
@@ -33,7 +44,11 @@ async function sendContact() {
     const res = await fetch('/.netlify/functions/send-message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(contactForm.value),
+      body: JSON.stringify({
+        ...contactForm.value,
+        website: website.value,
+        elapsedMs: formLoadedAt ? Date.now() - formLoadedAt : undefined,
+      }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Something went wrong.');
@@ -99,6 +114,13 @@ function telHref(raw) {
         </div>
         <div v-if="!contactSent" class="bg-[var(--color-bg)] rounded-2xl p-6 border border-[var(--color-border)] shadow-sm space-y-4">
           <h3 class="text-lg font-semibold text-[var(--color-text)]">Send a Message</h3>
+          <!-- Honeypot: hidden from real users (off-screen, aria-hidden, not
+               tabbable). Bots that auto-fill every field will populate it and
+               get silently rejected server-side. Do not remove. -->
+          <div aria-hidden="true" class="absolute left-[-9999px] w-px h-px overflow-hidden" style="opacity: 0;">
+            <label for="contact-website">Website</label>
+            <input id="contact-website" v-model="website" type="text" tabindex="-1" autocomplete="off" />
+          </div>
           <div>
             <label for="contact-name" class="block text-[0.8125rem] font-medium text-[var(--color-text-secondary)] mb-1">Full Name <span class="text-red-400" aria-hidden="true">*</span></label>
             <input id="contact-name" v-model="contactForm.name" type="text" placeholder="Your name" aria-required="true" :aria-describedby="contactError ? 'contact-error' : undefined" class="w-full px-3 py-2.5 rounded-lg border border-[var(--color-border)] text-sm text-[var(--color-text)] bg-[var(--color-bg)] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] hover:border-[var(--color-primary)]" />
