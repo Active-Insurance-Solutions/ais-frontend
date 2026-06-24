@@ -10,10 +10,66 @@ const TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'cj@activeinsurancegj.com';
 const FROM_EMAIL = process.env.CONTACT_FROM_EMAIL || 'onboarding@resend.dev';
 const SITE_DOMAIN = 'activeinsurancegj.com';
 
+// --- Bot/spam protection (Tier 1: no third party) ---
+// Field length caps. Anything legitimate fits comfortably; the caps just
+// stop a bot from relaying a megabyte of payload through us to cj@.
+const LIMITS = { name: 100, email: 150, phone: 40, message: 5000 } as const;
+// Minimum time a human plausibly spends on the form before submitting.
+// Bots POST in well under a second; real users take many seconds.
+const MIN_FILL_MS = 3000;
+// Messages with this many URLs are almost always link spam, not a real
+// insurance inquiry. We reject (not silently drop) so a rare legit sender
+// can adjust rather than have their message vanish.
+const MAX_LINKS = 3;
+
+// Requests must originate from our own site. The function endpoint is public,
+// so this blocks the easy attack: a bot POSTing straight to the URL with no
+// browser in the loop. Covers prod, www, and any *.netlify.app deploy/preview,
+// plus localhost for `netlify dev`.
+function isAllowedOrigin(value: string | null): boolean {
+  if (!value) return false;
+  try {
+    const host = new URL(value).hostname;
+    return (
+      host === 'activeinsurancegj.com' ||
+      host === 'www.activeinsurancegj.com' ||
+      host.endsWith('.netlify.app') ||
+      host === 'localhost' ||
+      host === '127.0.0.1'
+    );
+  } catch {
+    return false;
+  }
+}
+
+// Generic 200 used when we silently drop a request we're confident is a bot
+// (honeypot tripped, submitted too fast). Returning success — rather than an
+// error — denies the bot any signal it can adapt to.
+function silentOk() {
+  return new Response(JSON.stringify({ success: true }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+function countLinks(text: string): number {
+  return (text.match(/https?:\/\/|www\./gi) || []).length;
+}
+
 export default async (req: Request, _context: Context) => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Layer 1 — origin gate. Reject anything not posted from our own pages.
+  const origin = req.headers.get('origin');
+  const referer = req.headers.get('referer');
+  if (!isAllowedOrigin(origin) && !isAllowedOrigin(referer)) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
       headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -27,7 +83,19 @@ export default async (req: Request, _context: Context) => {
       bestDay,
       bestTime,
       preferredMethod,
+      website, // honeypot — must stay empty
+      elapsedMs, // ms between form render and submit
     } = await req.json();
+
+    // Layer 2 — honeypot. Hidden field no human sees; a filled value is a bot.
+    if (typeof website === 'string' && website.trim() !== '') {
+      return silentOk();
+    }
+
+    // Layer 3 — timing gate. Submissions faster than a human can type are bots.
+    if (typeof elapsedMs === 'number' && elapsedMs >= 0 && elapsedMs < MIN_FILL_MS) {
+      return silentOk();
+    }
 
     if (!name || !email || !message) {
       return new Response(JSON.stringify({ error: 'Name, email, and message are required.' }), {
@@ -41,6 +109,27 @@ export default async (req: Request, _context: Context) => {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
+    }
+
+    // Layer 4 — length caps.
+    if (
+      String(name).length > LIMITS.name ||
+      String(email).length > LIMITS.email ||
+      String(message).length > LIMITS.message ||
+      (phone && String(phone).length > LIMITS.phone)
+    ) {
+      return new Response(JSON.stringify({ error: 'One or more fields are too long.' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Layer 5 — link heuristic. Real inquiries rarely contain several URLs.
+    if (countLinks(String(message)) >= MAX_LINKS) {
+      return new Response(
+        JSON.stringify({ error: 'Your message looks like spam. Please remove links and try again.' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
     }
 
     const optionalRow = (label: string, value?: string) =>
